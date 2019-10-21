@@ -1,4 +1,4 @@
-module github.com/asnell/docdb
+module github.com/aksnell/docdb
 
 go 1.13
 
