@@ -10,24 +10,24 @@ type Collection struct {
 	name      string
 	documents []Document
 	docMap    map[int64]int
-	queue     chan *event
+	queue     chan request
 }
 
 func (c *Collection) listen() {
 	go func() {
 		for e := range c.queue {
 			time := time.Now().Unix()
-			switch e.goal {
-			case INSERT:
+			switch e.action {
+			case "INSERT":
 				c.Insert(e.json...)
-				e.connection.out <- result{
+				e.respond <- response{
 					time: time,
 					err:  nil,
 				}
-			case FIND:
-				e.connection.out <- result{
+			case "FIND":
+				e.respond <- response{
 					time: time,
-					data: c.Find(e.json...),
+					json: c.Find(e.json...),
 				}
 			}
 		}
@@ -42,12 +42,12 @@ func (c *Collection) registerID() int64 {
 	return id
 }
 
-func (c *Collection) createEvent(goal int, conn *connection, values ...map[string]interface{}) *event {
-	return &event{
-		goal,
+func (c *Collection) createResponse(action string, conn *Connection, json ...map[string]interface{}) response {
+	return response{
+		action,
 		time.Now().Unix(),
-		values,
-		conn,
+		json,
+		nil,
 	}
 }
 

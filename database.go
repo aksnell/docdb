@@ -1,26 +1,45 @@
 ﻿package main
 
 import (
+	"log"
 	"math/rand"
 	"time"
 )
 
-//Database defines the interface for creating, deleting and handeling connections to Collections.
+//Database defines the interface for creating, deleting and handeling connections to Collection(s).
 type Database struct {
-	collections map[string]Collection
-	connections []*connection
+	collections map[string]*Collection
+	connections []*Connection
 }
 
-//Connect a channel to the database able to interface to a specific collection.
-func (d *Database) Connect(collection string, out chan result) {
+//Create establishes a new collection if the supplied key does not already exist.
+func (db *Database) Create(key string) {
+	if _, exists := db.collections[key]; !exists {
+		col := &Collection{
+			key,
+			make([]Document, 0),
+			make(map[int64]int),
+			make(chan request, 1),
+		}
+		db.collections[key] = col
+		log.Printf("New collection: %s created!\n", key)
+		col.listen()
+	}
+}
+
+//Connect a channel to the database able to communicate with a specific Collection.
+func (db *Database) Connect(collection string) *Connection {
 	time := time.Now().Unix()
-	c := &connection{
+	conn := &Connection{
 		rand.Int63(),
 		time,
 		time,
 		true,
-		d.collections[collection].queue,
-		out,
+		db.collections[collection].queue,
+		make(chan response, 1),
+		make([][]byte, 0),
 	}
-	d.connections = append(d.connections, c)
+	db.connections = append(db.connections, conn)
+	conn.listen()
+	return conn
 }
